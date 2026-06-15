@@ -1,0 +1,29 @@
+{
+  "feature_id": "demo.cache",
+  "name": "Demo Cache",
+  "owner": "demo-team",
+  "version": "1.0.0",
+  "intended_behavior": "Reduce repeated-request latency without changing quality.",
+  "category": "runtime",
+  "variants": [
+    {
+      "variant_id": "off",
+      "label": "Disabled",
+      "config": {},
+      "is_control": true
+    },
+    {
+      "variant_id": "on",
+      "label": "Enabled",
+      "config": {},
+      "is_control": false
+    }
+  ],
+  "requires_retraining": false,
+  "expected_benefits": ["latency_ms"],
+  "possible_regressions": ["stale_result_rate"],
+  "protected_metrics": ["task_success_rate"],
+  "resource_metrics": ["latency_ms", "memory_bytes"],
+  "activation_probe": "demo.cache.hit_count"
+}
+
