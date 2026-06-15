@@ -4,7 +4,11 @@ import argparse
 import json
 from pathlib import Path
 
+from thirdeye.discovery import discover_project
+from thirdeye.manifest import load_manifest, save_manifest
 from thirdeye.models import FeatureCategory, FeatureSpec, FeatureVariant, ProjectSpec
+from thirdeye.models import LifecyclePhase
+from thirdeye.runner import ProjectRunner
 from thirdeye.sdk import ThirdEye
 
 
@@ -22,6 +26,14 @@ def main() -> None:
     init.add_argument("--name", default=None)
     init.add_argument("--description", default="")
 
+    onboard = commands.add_parser("onboard")
+    onboard.add_argument("root", nargs="?", default=".")
+    onboard.add_argument("--project", default=None)
+    onboard.add_argument("--output", default=None)
+
+    register_project = commands.add_parser("register-project")
+    register_project.add_argument("--manifest", default="thirdeye.json")
+
     register = commands.add_parser("register-feature")
     register.add_argument("--project", required=True)
     register.add_argument("--spec", required=True)
@@ -31,6 +43,25 @@ def main() -> None:
     evaluate.add_argument(
         "--profile", choices=["quick", "standard", "exhaustive", "auto"], default="auto"
     )
+
+    assess = commands.add_parser("assess")
+    assess.add_argument("--manifest", default="thirdeye.json")
+    assess.add_argument(
+        "--profile", choices=["quick", "standard", "exhaustive", "auto"], default="auto"
+    )
+
+    run = commands.add_parser("run")
+    run.add_argument("--manifest", default="thirdeye.json")
+    selection = run.add_mutually_exclusive_group()
+    selection.add_argument("--command", default=None)
+    selection.add_argument(
+        "--phase",
+        choices=[phase.value for phase in LifecyclePhase],
+        default=None,
+    )
+
+    inspect = commands.add_parser("inspect")
+    inspect.add_argument("--project", required=True)
 
     commands.add_parser("serve").add_argument("--port", type=int, default=8765)
 
@@ -44,6 +75,30 @@ def main() -> None:
         )
         eye.register_project(project)
         print(json.dumps(project.to_dict(), indent=2))
+    elif args.command == "onboard":
+        manifest = discover_project(args.root, args.project)
+        output = args.output or str(Path(args.root) / "thirdeye.json")
+        path = save_manifest(manifest, output)
+        print(
+            json.dumps(
+                {
+                    "manifest": str(path.resolve()),
+                    "project": manifest.project.to_dict(),
+                    "discovered_commands": [
+                        command.to_dict() for command in manifest.commands
+                    ],
+                    "next": (
+                        f"thirdeye register-project --manifest {path} && "
+                        f"thirdeye run --manifest {path}"
+                    ),
+                },
+                indent=2,
+            )
+        )
+    elif args.command == "register-project":
+        manifest = load_manifest(args.manifest)
+        eye.register_manifest(manifest)
+        print(json.dumps(manifest.to_dict(), indent=2))
     elif args.command == "register-feature":
         payload = _read_json(args.spec)
         payload["category"] = FeatureCategory(payload["category"])
@@ -65,6 +120,31 @@ def main() -> None:
     elif args.command == "evaluate":
         result = eye.evaluate(args.project, args.profile)
         print(json.dumps(result["report_paths"], indent=2))
+    elif args.command == "assess":
+        manifest = load_manifest(args.manifest)
+        result = eye.assess(manifest, args.profile)
+        print(
+            json.dumps(
+                {
+                    "run_results": result["run_results"],
+                    "reports": result["evaluation"]["report_paths"],
+                    "recommended_experiments": len(
+                        result["evaluation"]["recommended_experiments"]
+                    ),
+                },
+                indent=2,
+            )
+        )
+    elif args.command == "run":
+        manifest = load_manifest(args.manifest)
+        eye.register_manifest(manifest)
+        results = ProjectRunner(eye, manifest).run(
+            command_id=args.command,
+            phase=LifecyclePhase(args.phase) if args.phase else None,
+        )
+        print(json.dumps(results, indent=2))
+    elif args.command == "inspect":
+        print(json.dumps(eye.project_snapshot(args.project), indent=2))
     elif args.command == "serve":
         try:
             import uvicorn
@@ -75,4 +155,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "project": {
+    "project_id": "sample-project",
+    "name": "ThirdEye Sample Project",
+    "description": "A minimal software workload emitting structured evidence.",
+    "privacy_mode": "aggregate",
+    "compute_budget_minutes": 5,
+    "kind": "software",
+    "root": "examples/sample_project",
+    "schema_version": 1
+  },
+  "commands": [
+    {
+      "command_id": "evaluate",
+      "phase": "evaluate",
+      "argv": ["python", "workload.py"],
+      "adapter": "command",
+      "cwd": ".",
+      "timeout_seconds": 60,
+      "env": {},
+      "metrics_file": null,
+      "retain_output": false,
+      "required": true,
+      "description": "Run the sample deterministic evaluator.",
+      "schema_version": 1
+    }
+  ],
+  "features": [],
+  "datasets": {},
+  "tokenizer": null,
+  "checkpoint": null,
+  "tags": ["example"]
+}
+

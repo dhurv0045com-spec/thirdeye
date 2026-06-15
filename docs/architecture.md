@@ -10,6 +10,16 @@ The Python SDK owns stable contracts. Storage, APIs, dashboards, benchmark
 adapters, and remote workers consume those contracts rather than redefining
 them.
 
+Project integration is layered:
+
+```text
+portable manifest
+  -> lifecycle command runner
+  -> Python runtime hooks
+  -> framework adapter
+  -> feature and protocol contracts
+```
+
 ## Trust Boundaries
 
 - Telemetry is observational.
@@ -22,4 +32,3 @@ them.
 
 V0.1 uses SQLite and content-addressed local artifacts. Server storage and
 remote worker scheduling will preserve the same public contracts.
-

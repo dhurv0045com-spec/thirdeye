@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thirdeye-evidence"
-version = "0.1.0"
+version = "0.2.0"
 description = "Universal evidence and experiment platform for measuring what works, why, and at what cost."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,9 @@ dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.4"]
 thirdeye = "thirdeye.cli:main"
 evidence = "thirdeye.cli:main"
 
+[project.entry-points."thirdeye.adapters"]
+# Third-party packages can register adapter factories in this group.
+
 [tool.setuptools.packages.find]
 include = ["thirdeye*"]
 
@@ -30,4 +33,3 @@ addopts = "-q"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-

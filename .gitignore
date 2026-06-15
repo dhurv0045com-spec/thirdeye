@@ -8,8 +8,8 @@ dist/
 build/
 *.egg-info/
 .thirdeye/
+.thirdeye-*/
 artifacts/
 *.db
 *.sqlite
 .env
-

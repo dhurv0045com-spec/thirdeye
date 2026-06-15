@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import shutil
 from pathlib import Path
 from typing import Any, Iterable
+
+from thirdeye.hashing import hash_file
 
 
 SCHEMA_SQL = """
@@ -87,6 +90,18 @@ class EvidenceStore:
             ).fetchall()
         return [json.loads(row["payload_json"]) for row in rows]
 
+    def list_all(self, record_type: str) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT payload_json FROM records
+                WHERE record_type=?
+                ORDER BY created_at, record_id
+                """,
+                (record_type,),
+            ).fetchall()
+        return [json.loads(row["payload_json"]) for row in rows]
+
     def put_metrics(self, run_id: str, metrics: Iterable[dict[str, Any]]) -> None:
         with self.connect() as connection:
             connection.executemany(
@@ -110,3 +125,31 @@ class EvidenceStore:
             ).fetchall()
         return [json.loads(row["payload_json"]) for row in rows]
 
+    def add_artifact(
+        self,
+        *,
+        project_id: str,
+        run_id: str,
+        source: str | Path,
+        kind: str = "artifact",
+    ) -> dict[str, Any]:
+        path = Path(source)
+        if not path.exists() or not path.is_file():
+            raise FileNotFoundError(path)
+        digest = hash_file(path)
+        target = self.artifact_dir / digest[:2] / digest
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            shutil.copy2(path, target)
+        payload = {
+            "artifact_id": digest,
+            "project_id": project_id,
+            "run_id": run_id,
+            "kind": kind,
+            "source_name": path.name,
+            "path": str(target),
+            "size_bytes": path.stat().st_size,
+            "sha256": digest,
+        }
+        self.put("artifact", f"{run_id}:{digest}", project_id, payload)
+        return payload

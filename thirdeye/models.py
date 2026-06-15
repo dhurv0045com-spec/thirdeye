@@ -18,6 +18,25 @@ class FeatureCategory(StrEnum):
     PRODUCT = "product"
 
 
+class ProjectKind(StrEnum):
+    SOFTWARE = "software"
+    AI = "ai"
+    MACHINE_LEARNING = "machine_learning"
+    AGENT = "agent"
+    HYBRID = "hybrid"
+
+
+class LifecyclePhase(StrEnum):
+    DISCOVER = "discover"
+    BUILD = "build"
+    TEST = "test"
+    TRAIN = "train"
+    EVALUATE = "evaluate"
+    INFERENCE = "inference"
+    SERVE = "serve"
+    RUNTIME = "runtime"
+
+
 class ProtocolKind(StrEnum):
     SYSTEM_AUDIT = "system_audit"
     RUNTIME_ABLATION = "runtime_ablation"
@@ -64,6 +83,8 @@ class ProjectSpec:
     description: str = ""
     privacy_mode: str = "aggregate"
     compute_budget_minutes: float = 0.0
+    kind: ProjectKind = ProjectKind.HYBRID
+    root: str = "."
     schema_version: int = SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -171,6 +192,89 @@ class MetricObservation:
 
 
 @dataclass(frozen=True)
+class CommandSpec:
+    command_id: str
+    phase: LifecyclePhase
+    argv: tuple[str, ...]
+    adapter: str = "command"
+    cwd: str = "."
+    timeout_seconds: float = 600.0
+    env: dict[str, str] = field(default_factory=dict)
+    metrics_file: str | None = None
+    retain_output: bool = False
+    required: bool = True
+    description: str = ""
+    schema_version: int = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if not self.argv:
+            raise ValueError("A command must contain at least one argument.")
+        if self.timeout_seconds <= 0:
+            raise ValueError("Command timeout must be positive.")
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ProjectManifest:
+    project: ProjectSpec
+    commands: tuple[CommandSpec, ...] = ()
+    features: tuple[FeatureSpec, ...] = ()
+    datasets: dict[str, str] = field(default_factory=dict)
+    tokenizer: str | None = None
+    checkpoint: str | None = None
+    tags: tuple[str, ...] = ()
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class LifecycleEvent:
+    event_id: str
+    project_id: str
+    run_id: str
+    phase: LifecyclePhase
+    name: str
+    timestamp: float
+    severity: str = "info"
+    attributes: dict[str, Any] = field(default_factory=dict)
+    trace_id: str = ""
+    span_id: str = ""
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class RunResult:
+    run_id: str
+    command_id: str
+    phase: LifecyclePhase
+    status: str
+    return_code: int | None
+    started_at: float
+    ended_at: float
+    stdout_path: str
+    stderr_path: str
+    metrics: tuple[MetricObservation, ...] = ()
+    error: str | None = None
+    schema_version: int = SCHEMA_VERSION
+
+    @property
+    def duration_seconds(self) -> float:
+        return max(0.0, self.ended_at - self.started_at)
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["duration_seconds"] = self.duration_seconds
+        return payload
+
+
+@dataclass(frozen=True)
 class EvidenceRecord:
     evidence_id: str
     project_id: str
@@ -188,4 +292,3 @@ class EvidenceRecord:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
