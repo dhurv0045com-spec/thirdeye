@@ -60,6 +60,9 @@ Read [the complete walkthrough](walkthrough.md) for the repository tree,
 scientific model, intelligence telemetry, AN-RA training flow, report
 interpretation, readiness boundary, and recommended tuning process.
 
+Read [the feature map](feature.md) for the current capability checklist and the
+remaining roadmap to reach the full ThirdEye vision.
+
 ## Intelligence Telemetry
 
 ```python
