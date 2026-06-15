@@ -56,6 +56,10 @@ and scorer version behind every claim.
 See [the integration guide](docs/integration-guide.md) for command, Python,
 PyTorch, feature-ablation, and third-party adapter examples.
 
+Read [the complete walkthrough](walkthrough.md) for the repository tree,
+scientific model, intelligence telemetry, AN-RA training flow, report
+interpretation, readiness boundary, and recommended tuning process.
+
 ## Intelligence Telemetry
 
 ```python
