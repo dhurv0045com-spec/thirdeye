@@ -4,8 +4,9 @@ import json
 import os
 import sqlite3
 import shutil
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from thirdeye.hashing import hash_file
 
@@ -46,10 +47,15 @@ class EvidenceStore:
         with self.connect() as connection:
             connection.executescript(SCHEMA_SQL)
 
-    def connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.db_path)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def put(
         self,

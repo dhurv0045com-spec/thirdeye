@@ -14,6 +14,7 @@ def build_bundle(
     runs: list[dict[str, Any]] | None = None,
     run_results: list[dict[str, Any]] | None = None,
     metrics: dict[str, list[dict[str, Any]]] | None = None,
+    intelligence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     evidence_by_feature = {row["feature_id"]: row for row in evidence}
     metric_summary = _metric_summary(run_results or [], metrics or {})
@@ -30,6 +31,13 @@ def build_bundle(
         "run_results": run_results or [],
         "metrics": metrics or {},
         "metric_summary": metric_summary,
+        "intelligence": intelligence
+        or {
+            "subsystems": [],
+            "signals": [],
+            "capability_targets": [],
+            "estimates": [],
+        },
         "summary": _summary(
             features=features,
             evidence=evidence,
@@ -54,6 +62,16 @@ def write_reports(bundle: dict[str, Any], output_dir: str | Path) -> dict[str, s
         grade = evidence.get("grade") if evidence else "untested"
         missing = ", ".join((evidence or {}).get("missing_requirements", [])) or "none"
         feature_lines.append(f"| {feature['name']} | {grade} | {missing} |")
+    intelligence = bundle["intelligence"]
+    estimates = intelligence.get("estimates", [])
+    latest_estimate = estimates[-1] if estimates else None
+    subsystem_lines = [
+        (
+            f"| {subsystem['name']} | {subsystem['kind']} | "
+            f"{_subsystem_score(latest_estimate, subsystem['subsystem_id'])} |"
+        )
+        for subsystem in intelligence.get("subsystems", [])
+    ]
     scorecard_path.write_text(
         "\n".join(
             [
@@ -91,6 +109,24 @@ def write_reports(bundle: dict[str, Any], output_dir: str | Path) -> dict[str, s
                 "| --- | --- | --- |",
                 *feature_lines,
                 "",
+                "## Model Intelligence Telemetry",
+                "",
+                (
+                    "Overall calibrated capability estimate: "
+                    + (
+                        f"{latest_estimate['overall']:.6g} "
+                        f"(confidence {latest_estimate['confidence']:.3f})"
+                        if latest_estimate and latest_estimate.get("overall") is not None
+                        else "unavailable until telemetry is calibrated against held-out evaluations"
+                    )
+                ),
+                "",
+                "| Subsystem | Kind | Calibrated contribution |",
+                "| --- | --- | ---: |",
+                *subsystem_lines,
+                "",
+                "Telemetry is observational. Subsystem contributions are predictive, not causal.",
+                "",
                 f"Recommended experiments: {len(bundle['recommended_experiments'])}",
             ]
         )
@@ -122,6 +158,13 @@ def write_reports(bundle: dict[str, Any], output_dir: str | Path) -> dict[str, s
                     indent=2,
                     sort_keys=True,
                 ),
+                "```",
+                "",
+                "## Intelligence Telemetry",
+                "Training dynamics and internal signals are observational. The overall estimate "
+                "is emitted only after fitting against held-out capability targets.",
+                "```json",
+                json.dumps(bundle["intelligence"], indent=2, sort_keys=True),
                 "```",
                 "",
                 "## Recommended Experiments",
@@ -205,6 +248,13 @@ def _format_delta(value: float | None) -> str:
     return "n/a" if value is None else f"{value:+.6g}"
 
 
+def _subsystem_score(estimate: dict[str, Any] | None, subsystem_id: str) -> str:
+    if not estimate:
+        return "uncalibrated"
+    value = estimate.get("subsystem_scores", {}).get(subsystem_id)
+    return "uncalibrated" if value is None else f"{float(value):+.6g}"
+
+
 def _dashboard_html(bundle: dict[str, Any]) -> str:
     data = json.dumps(bundle, sort_keys=True).replace("</", "<\\/")
     return f"""<!doctype html>
@@ -246,6 +296,13 @@ document.querySelector('#app').innerHTML=`
 <div class="card"><div class="muted">Completed Runs</div><div class="value ok">${{s.completed_runs}}</div></div>
 <div class="card"><div class="muted">Tracked Metrics</div><div class="value">${{s.metric_count}}</div></div>
 </div>
+<section class="card"><h2>Model Intelligence Telemetry</h2>${{(()=>{{const x=d.intelligence;
+const e=x.estimates.at(-1);return `<div class="grid"><div><div class="muted">Subsystems</div>
+<div class="value">${{x.subsystems.length}}</div></div><div><div class="muted">Signals</div>
+<div class="value">${{x.signals.length}}</div></div><div><div class="muted">Capability Estimate</div>
+<div class="value">${{e?.overall==null?'Uncalibrated':Number(e.overall).toPrecision(5)}}</div></div>
+<div><div class="muted">Confidence</div><div class="value">${{e?Number(e.confidence).toFixed(3):'0.000'}}</div></div></div>
+<p class="muted">Internal telemetry is observational. Calibrated contributions are predictive, not causal.</p>`}})()}}</section>
 <section class="card"><h2>Latest Metrics</h2><table><thead><tr><th>Metric</th><th>Value</th>
 <th>Direction</th><th>Delta</th><th>Scorer</th></tr></thead><tbody>${{d.metric_summary.map(m=>`<tr>
 <td><strong>${{esc(m.metric_id)}}</strong></td><td>${{Number(m.value).toPrecision(6)}} ${{esc(m.unit)}}</td>

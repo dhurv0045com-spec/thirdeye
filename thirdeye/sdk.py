@@ -6,13 +6,17 @@ from typing import Iterable
 
 from thirdeye.controller import plan_missing_evidence
 from thirdeye.models import (
+    CapabilityTarget,
     FeatureSpec,
+    IntelligenceEstimate,
+    IntelligenceSignal,
     LifecycleEvent,
     MetricObservation,
     ProjectManifest,
     ProjectSpec,
     RunManifest,
     RunResult,
+    SubsystemSpec,
 )
 from thirdeye.reports import build_bundle, write_reports
 from thirdeye.store import EvidenceStore
@@ -38,6 +42,53 @@ class ThirdEye:
 
     def register_feature(self, project_id: str, feature: FeatureSpec) -> None:
         self.store.put("feature", feature.feature_id, project_id, feature.to_dict())
+
+    def register_subsystem(self, project_id: str, subsystem: SubsystemSpec) -> None:
+        self.store.put(
+            "subsystem",
+            subsystem.subsystem_id,
+            project_id,
+            subsystem.to_dict(),
+        )
+
+    def record_intelligence_signals(
+        self,
+        project_id: str,
+        *,
+        checkpoint_id: str,
+        signals: Iterable[IntelligenceSignal],
+    ) -> None:
+        for index, signal in enumerate(signals):
+            payload = {**signal.to_dict(), "checkpoint_id": checkpoint_id}
+            record_id = (
+                f"{checkpoint_id}:{signal.step}:{signal.subsystem_id}:"
+                f"{signal.signal_id}:{index}"
+            )
+            self.store.put("intelligence_signal", record_id, project_id, payload)
+
+    def record_capability_target(
+        self,
+        project_id: str,
+        target: CapabilityTarget,
+    ) -> None:
+        self.store.put(
+            "capability_target",
+            f"{target.checkpoint_id}:{target.target_id}",
+            project_id,
+            target.to_dict(),
+        )
+
+    def record_intelligence_estimate(
+        self,
+        project_id: str,
+        estimate: IntelligenceEstimate,
+    ) -> None:
+        self.store.put(
+            "intelligence_estimate",
+            estimate.checkpoint_id,
+            project_id,
+            estimate.to_dict(),
+        )
 
     def start_run(self, manifest: RunManifest) -> None:
         self.store.put("run", manifest.run_id, manifest.project_id, manifest.to_dict())
@@ -80,10 +131,79 @@ class ThirdEye:
             "events": self.store.list("event", project_id),
             "evidence": self.store.list("evidence", project_id),
             "artifacts": self.store.list("artifact", project_id),
+            "intelligence": self.intelligence_snapshot(project_id),
             "metrics": {
                 run["run_id"]: self.store.metrics(run["run_id"]) for run in runs
             },
         }
+
+    def intelligence_snapshot(self, project_id: str) -> dict:
+        return {
+            "subsystems": self.store.list("subsystem", project_id),
+            "signals": self.store.list("intelligence_signal", project_id),
+            "capability_targets": self.store.list("capability_target", project_id),
+            "estimates": self.store.list("intelligence_estimate", project_id),
+        }
+
+    def calibrate_intelligence(
+        self,
+        project_id: str,
+        *,
+        target_id: str | None = None,
+        minimum_checkpoints: int = 5,
+    ) -> IntelligenceEstimate:
+        from thirdeye.intelligence.calibration import IntelligenceCalibrator
+        from thirdeye.intelligence.signals import TrainingSignalCollector
+        from thirdeye.models import MetricDirection, SignalKind
+
+        snapshot = self.intelligence_snapshot(project_id)
+        grouped: dict[str, TrainingSignalCollector] = {}
+        for row in snapshot["signals"]:
+            collector = grouped.setdefault(
+                str(row["checkpoint_id"]),
+                TrainingSignalCollector(),
+            )
+            collector.record(
+                str(row["signal_id"]),
+                float(row["value"]),
+                step=int(row["step"]),
+                subsystem_id=str(row["subsystem_id"]),
+                kind=SignalKind(row["kind"]),
+                direction=MetricDirection(row["direction"]),
+                unit=str(row.get("unit", "")),
+                sample_count=int(row.get("sample_count", 1)),
+                confidence=float(row.get("confidence", 1.0)),
+                metadata=dict(row.get("metadata", {})),
+            )
+        targets = [
+            row
+            for row in snapshot["capability_targets"]
+            if target_id is None or row["target_id"] == target_id
+        ]
+        observations = [
+            (grouped[str(row["checkpoint_id"])].vector(), float(row["value"]))
+            for row in targets
+            if str(row["checkpoint_id"]) in grouped
+        ]
+        if not observations:
+            raise ValueError("No checkpoints have both telemetry and capability targets.")
+        latest_checkpoint = str(targets[-1]["checkpoint_id"])
+        latest_collector = grouped[latest_checkpoint]
+        calibrator = IntelligenceCalibrator(minimum_samples=minimum_checkpoints)
+        if len(observations) < minimum_checkpoints:
+            return calibrator.predict(
+                latest_collector.vector(),
+                checkpoint_id=latest_checkpoint,
+                subsystem_vectors=latest_collector.subsystem_vectors(),
+            )
+        calibrator.fit(observations)
+        estimate = calibrator.predict(
+            latest_collector.vector(),
+            checkpoint_id=latest_checkpoint,
+            subsystem_vectors=latest_collector.subsystem_vectors(),
+        )
+        self.record_intelligence_estimate(project_id, estimate)
+        return estimate
 
     def evaluate(self, project_id: str, profile: str = "auto") -> dict:
         project = self.store.get("project", project_id)
@@ -110,6 +230,7 @@ class ThirdEye:
             metrics={
                 run["run_id"]: self.store.metrics(run["run_id"]) for run in run_rows
             },
+            intelligence=self.intelligence_snapshot(project_id),
         )
         report_paths = write_reports(bundle, self.store.home / "reports" / project_id)
         return {**bundle, "report_paths": report_paths}

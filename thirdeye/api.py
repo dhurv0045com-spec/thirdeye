@@ -12,7 +12,7 @@ from thirdeye.manifest import manifest_from_dict
 from thirdeye.models import ProjectSpec
 from thirdeye.sdk import ThirdEye
 
-app = FastAPI(title="ThirdEye", version="0.2.0")
+app = FastAPI(title="ThirdEye", version="0.3.0")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -64,6 +64,11 @@ def assess(project_id: str, profile: str = "auto") -> dict:
 @app.get("/projects/{project_id}/features")
 def features(project_id: str) -> dict:
     return {"features": ThirdEye().store.list("feature", project_id)}
+
+
+@app.get("/projects/{project_id}/intelligence")
+def intelligence(project_id: str) -> dict:
+    return ThirdEye().intelligence_snapshot(project_id)
 
 
 @app.get("/projects/{project_id}")

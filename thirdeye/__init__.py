@@ -1,10 +1,13 @@
 """ThirdEye public SDK."""
 
 from thirdeye.models import (
+    CapabilityTarget,
     EvidenceGrade,
     FeatureCategory,
     FeatureSpec,
     FeatureVariant,
+    IntelligenceEstimate,
+    IntelligenceSignal,
     LifecyclePhase,
     MetricDirection,
     MetricObservation,
@@ -14,16 +17,21 @@ from thirdeye.models import (
     ProtocolKind,
     ProtocolSpec,
     RunManifest,
+    SignalKind,
+    SubsystemSpec,
 )
 from thirdeye.sdk import ThirdEye
 from thirdeye.integration import emit_metric
 from thirdeye.runtime import instrument, lifecycle
 
 __all__ = [
+    "CapabilityTarget",
     "EvidenceGrade",
     "FeatureCategory",
     "FeatureSpec",
     "FeatureVariant",
+    "IntelligenceEstimate",
+    "IntelligenceSignal",
     "LifecyclePhase",
     "MetricDirection",
     "MetricObservation",
@@ -33,10 +41,12 @@ __all__ = [
     "ProtocolKind",
     "ProtocolSpec",
     "RunManifest",
+    "SignalKind",
+    "SubsystemSpec",
     "ThirdEye",
     "emit_metric",
     "instrument",
     "lifecycle",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

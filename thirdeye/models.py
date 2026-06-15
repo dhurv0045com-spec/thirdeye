@@ -70,6 +70,14 @@ class EvidenceGrade(StrEnum):
     REGRESSED = "regressed"
 
 
+class SignalKind(StrEnum):
+    OPTIMIZATION = "optimization"
+    REPRESENTATION = "representation"
+    BEHAVIOR = "behavior"
+    EFFICIENCY = "efficiency"
+    RELIABILITY = "reliability"
+
+
 class MetricDirection(StrEnum):
     HIGHER = "higher"
     LOWER = "lower"
@@ -272,6 +280,70 @@ class RunResult:
         payload = asdict(self)
         payload["duration_seconds"] = self.duration_seconds
         return payload
+
+
+@dataclass(frozen=True)
+class SubsystemSpec:
+    subsystem_id: str
+    name: str
+    owner: str
+    kind: str
+    parent_id: str | None = None
+    module_patterns: tuple[str, ...] = ()
+    expected_signals: tuple[str, ...] = ()
+    protected: bool = False
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class IntelligenceSignal:
+    signal_id: str
+    subsystem_id: str
+    kind: SignalKind
+    value: float
+    step: int
+    direction: MetricDirection
+    unit: str = ""
+    sample_count: int = 1
+    confidence: float = 1.0
+    metadata: dict[str, Any] = field(default_factory=dict)
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class CapabilityTarget:
+    target_id: str
+    value: float
+    checkpoint_id: str
+    evaluator: str
+    sample_count: int
+    metadata: dict[str, Any] = field(default_factory=dict)
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class IntelligenceEstimate:
+    checkpoint_id: str
+    overall: float | None
+    confidence: float
+    calibrated: bool
+    subsystem_scores: dict[str, float | None]
+    signal_vector: dict[str, float]
+    calibration_error: float | None = None
+    limitations: tuple[str, ...] = ()
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 @dataclass(frozen=True)

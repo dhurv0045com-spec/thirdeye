@@ -63,6 +63,14 @@ def main() -> None:
     inspect = commands.add_parser("inspect")
     inspect.add_argument("--project", required=True)
 
+    intelligence = commands.add_parser("intelligence")
+    intelligence.add_argument("--project", required=True)
+
+    calibrate = commands.add_parser("calibrate-intelligence")
+    calibrate.add_argument("--project", required=True)
+    calibrate.add_argument("--target", default=None)
+    calibrate.add_argument("--minimum-checkpoints", type=int, default=5)
+
     commands.add_parser("serve").add_argument("--port", type=int, default=8765)
 
     args = parser.parse_args()
@@ -145,6 +153,15 @@ def main() -> None:
         print(json.dumps(results, indent=2))
     elif args.command == "inspect":
         print(json.dumps(eye.project_snapshot(args.project), indent=2))
+    elif args.command == "intelligence":
+        print(json.dumps(eye.intelligence_snapshot(args.project), indent=2))
+    elif args.command == "calibrate-intelligence":
+        estimate = eye.calibrate_intelligence(
+            args.project,
+            target_id=args.target,
+            minimum_checkpoints=args.minimum_checkpoints,
+        )
+        print(json.dumps(estimate.to_dict(), indent=2))
     elif args.command == "serve":
         try:
             import uvicorn
