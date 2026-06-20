@@ -66,6 +66,9 @@ def main() -> None:
     intelligence = commands.add_parser("intelligence")
     intelligence.add_argument("--project", required=True)
 
+    explain = commands.add_parser("explain")
+    explain.add_argument("--project", required=True)
+
     calibrate = commands.add_parser("calibrate-intelligence")
     calibrate.add_argument("--project", required=True)
     calibrate.add_argument("--target", default=None)
@@ -155,6 +158,8 @@ def main() -> None:
         print(json.dumps(eye.project_snapshot(args.project), indent=2))
     elif args.command == "intelligence":
         print(json.dumps(eye.intelligence_snapshot(args.project), indent=2))
+    elif args.command == "explain":
+        print(json.dumps(eye.intelligence_snapshot(args.project)["insight"], indent=2))
     elif args.command == "calibrate-intelligence":
         estimate = eye.calibrate_intelligence(
             args.project,

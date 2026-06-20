@@ -138,12 +138,19 @@ class ThirdEye:
         }
 
     def intelligence_snapshot(self, project_id: str) -> dict:
-        return {
+        snapshot = {
             "subsystems": self.store.list("subsystem", project_id),
             "signals": self.store.list("intelligence_signal", project_id),
             "capability_targets": self.store.list("capability_target", project_id),
             "estimates": self.store.list("intelligence_estimate", project_id),
         }
+        from thirdeye.intelligence.diagnostics import TrainingInsightEngine
+
+        snapshot["insight"] = TrainingInsightEngine().analyze_payloads(
+            snapshot["signals"],
+            estimates=snapshot["estimates"],
+        ).to_dict()
+        return snapshot
 
     def calibrate_intelligence(
         self,

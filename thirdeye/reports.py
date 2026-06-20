@@ -37,6 +37,13 @@ def build_bundle(
             "signals": [],
             "capability_targets": [],
             "estimates": [],
+            "insight": {
+                "status": "insufficient_telemetry",
+                "signal_count": 0,
+                "findings": [],
+                "limitations": ["No telemetry is available."],
+                "causal": False,
+            },
         },
         "summary": _summary(
             features=features,
@@ -63,6 +70,8 @@ def write_reports(bundle: dict[str, Any], output_dir: str | Path) -> dict[str, s
         missing = ", ".join((evidence or {}).get("missing_requirements", [])) or "none"
         feature_lines.append(f"| {feature['name']} | {grade} | {missing} |")
     intelligence = bundle["intelligence"]
+    insight = intelligence.get("insight", {})
+    insight_findings = insight.get("findings", [])
     estimates = intelligence.get("estimates", [])
     latest_estimate = estimates[-1] if estimates else None
     subsystem_lines = [
@@ -127,6 +136,26 @@ def write_reports(bundle: dict[str, Any], output_dir: str | Path) -> dict[str, s
                 "",
                 "Telemetry is observational. Subsystem contributions are predictive, not causal.",
                 "",
+                "## What ThirdEye Observed",
+                "",
+                f"Status: `{insight.get('status', 'insufficient_telemetry')}`. "
+                "These are diagnostic observations, not causal conclusions.",
+                "",
+                "| Severity | Observation | Confidence | Basis | Recommended next action |",
+                "| --- | --- | ---: | --- | --- |",
+                *[
+                    (
+                        f"| {row.get('severity', 'info')} | {row.get('summary', '')} | "
+                        f"{float(row.get('confidence', 0.0)):.2f} | "
+                        f"{' ; '.join(row.get('basis', []))} | {row.get('recommended_action', '')} |"
+                    )
+                    for row in insight_findings
+                ],
+                *( ["| info | No diagnostic findings yet. | 0.00 | telemetry is sparse | Record more training signals. |"]
+                   if not insight_findings else [] ),
+                "",
+                "Limitations: " + " ".join(insight.get("limitations", [])),
+                "",
                 f"Recommended experiments: {len(bundle['recommended_experiments'])}",
             ]
         )
@@ -165,6 +194,13 @@ def write_reports(bundle: dict[str, Any], output_dir: str | Path) -> dict[str, s
                 "is emitted only after fitting against held-out capability targets.",
                 "```json",
                 json.dumps(bundle["intelligence"], indent=2, sort_keys=True),
+                "```",
+                "",
+                "## Training Interpretation",
+                "The following findings are observational diagnostics. They describe the captured "
+                "telemetry and recommend the next measurement; they do not establish causality.",
+                "```json",
+                json.dumps(insight, indent=2, sort_keys=True),
                 "```",
                 "",
                 "## Recommended Experiments",
@@ -303,6 +339,11 @@ const e=x.estimates.at(-1);return `<div class="grid"><div><div class="muted">Sub
 <div class="value">${{e?.overall==null?'Uncalibrated':Number(e.overall).toPrecision(5)}}</div></div>
 <div><div class="muted">Confidence</div><div class="value">${{e?Number(e.confidence).toFixed(3):'0.000'}}</div></div></div>
 <p class="muted">Internal telemetry is observational. Calibrated contributions are predictive, not causal.</p>`}})()}}</section>
+<section class="card"><h2>What ThirdEye Observed</h2>${{(()=>{{const i=d.intelligence.insight||{{status:'insufficient_telemetry',findings:[]}};
+const rows=i.findings||[];return `<div class="muted">Status: <span class="pill">${{esc(i.status)}}</span> &middot; Observational diagnostics, not causal conclusions.</div>
+<table><thead><tr><th>Severity</th><th>Observation</th><th>Confidence</th><th>Basis</th><th>Recommended next action</th></tr></thead><tbody>${{rows.map(x=>`<tr>
+<td><span class="pill">${{esc(x.severity)}}</span></td><td><strong>${{esc(x.title)}}</strong><div class="muted">${{esc(x.summary)}}</div></td>
+<td>${{Number(x.confidence||0).toFixed(2)}}</td><td class="muted">${{esc((x.basis||[]).join(' ; '))}}</td><td>${{esc(x.recommended_action)}}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No findings yet. Record telemetry during training or runtime.</td></tr>'}}</tbody></table>`}})()}}</section>
 <section class="card"><h2>Latest Metrics</h2><table><thead><tr><th>Metric</th><th>Value</th>
 <th>Direction</th><th>Delta</th><th>Scorer</th></tr></thead><tbody>${{d.metric_summary.map(m=>`<tr>
 <td><strong>${{esc(m.metric_id)}}</strong></td><td>${{Number(m.value).toPrecision(6)}} ${{esc(m.unit)}}</td>

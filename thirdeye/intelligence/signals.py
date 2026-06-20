@@ -62,6 +62,7 @@ class TrainingSignalCollector:
         gradient_norm: float,
         update_ratio: float | None = None,
         tokens_per_second: float | None = None,
+        token_utilization: float | None = None,
         validation_loss: float | None = None,
     ) -> None:
         self.record(
@@ -96,6 +97,17 @@ class TrainingSignalCollector:
                 step=step,
                 kind=SignalKind.EFFICIENCY,
                 unit="tokens/second",
+            )
+        if token_utilization is not None:
+            utilization = float(token_utilization)
+            if not 0.0 <= utilization <= 1.0:
+                raise ValueError("token_utilization must be between 0 and 1")
+            self.record(
+                "efficiency.token_utilization",
+                utilization,
+                step=step,
+                kind=SignalKind.EFFICIENCY,
+                unit="fraction",
             )
         if validation_loss is not None:
             self.record(

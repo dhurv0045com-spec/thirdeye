@@ -84,6 +84,13 @@ class MetricDirection(StrEnum):
     TARGET = "target"
 
 
+class InsightSeverity(StrEnum):
+    INFO = "info"
+    WATCH = "watch"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
 @dataclass(frozen=True)
 class ProjectSpec:
     project_id: str
@@ -340,6 +347,40 @@ class IntelligenceEstimate:
     signal_vector: dict[str, float]
     calibration_error: float | None = None
     limitations: tuple[str, ...] = ()
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class InsightFinding:
+    """An observational explanation grounded in captured telemetry."""
+
+    finding_id: str
+    severity: InsightSeverity
+    title: str
+    summary: str
+    basis: tuple[str, ...]
+    recommended_action: str
+    confidence: float
+    causal: bool = False
+    schema_version: int = SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class TrainingInsightReport:
+    """Human-readable diagnostics without turning telemetry into causal proof."""
+
+    status: str
+    signal_count: int
+    step_range: tuple[int, int] | None
+    findings: tuple[InsightFinding, ...]
+    limitations: tuple[str, ...]
+    causal: bool = False
     schema_version: int = SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:

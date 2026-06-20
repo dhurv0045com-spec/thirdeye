@@ -23,6 +23,8 @@ estimate appears only after calibration against versioned held-out evaluations.
 - Registered model subsystem graph with sampled, non-mutating PyTorch hooks.
 - Intelligence Signal Vectors and calibrated checkpoint capability estimates.
 - Per-subsystem predictive contributions, uncertainty, and explicit limitations.
+- Training Insight Engine: turns telemetry into bounded observations, measured
+  basis, confidence, and the smallest useful next measurement.
 - Portable `thirdeye.json` onboarding manifest for software, AI, ML, and agent projects.
 - Build, test, train, evaluate, inference, serving, and runtime lifecycle execution.
 - Generic CLI adapter, Python instrumentation, optional PyTorch profiling, and plugin API.
@@ -97,3 +99,18 @@ Call `monitor.checkpoint(checkpoint_id)` during training. Record held-out
 `CapabilityTarget` results for several checkpoints to calibrate the estimate.
 Telemetry remains diagnostic by default; it is not added to the training
 objective unless a project explicitly validates and opts into a proxy loss.
+
+## Training Insights
+
+ThirdEye now explains the state of a run without pretending that an internal
+signal proves a cause. It identifies patterns such as rising or plateauing
+loss, held-out regressions, gradient instability, scheduler transitions,
+throughput regressions, padding waste, subsystem drift, and calibration gaps.
+
+```powershell
+thirdeye explain --project your-project-id
+```
+
+Every finding includes its measured basis, confidence, limitations, and a
+recommended next measurement or controlled experiment. A diagnostic is never
+presented as a universal intelligence score or causal attribution.

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Iterable
 
 from thirdeye.intelligence.calibration import IntelligenceCalibrator
+from thirdeye.intelligence.diagnostics import TrainingInsightEngine
 from thirdeye.intelligence.signals import TrainingSignalCollector
 from thirdeye.models import (
     CapabilityTarget,
@@ -128,6 +129,13 @@ class IntelligenceMonitor:
         for estimate in self.estimates:
             eye.record_intelligence_estimate(project_id, estimate)
 
+    def explain(self):
+        """Return bounded observational explanations for the current telemetry."""
+        return TrainingInsightEngine().analyze(
+            self.collector.signals,
+            estimates=self.estimates,
+        )
+
     def write_report(self, path: str | Path) -> Path:
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -146,6 +154,7 @@ class IntelligenceMonitor:
             "signals": [item.to_dict() for item in self.collector.signals],
             "targets": [item.to_dict() for item in self.targets],
             "estimates": [item.to_dict() for item in self.estimates],
+            "insight": self.explain().to_dict(),
         }
         target.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         return target

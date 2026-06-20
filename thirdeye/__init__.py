@@ -8,6 +8,8 @@ from thirdeye.models import (
     FeatureVariant,
     IntelligenceEstimate,
     IntelligenceSignal,
+    InsightFinding,
+    InsightSeverity,
     LifecyclePhase,
     MetricDirection,
     MetricObservation,
@@ -19,6 +21,7 @@ from thirdeye.models import (
     RunManifest,
     SignalKind,
     SubsystemSpec,
+    TrainingInsightReport,
 )
 from thirdeye.sdk import ThirdEye
 from thirdeye.integration import emit_metric
@@ -32,6 +35,8 @@ __all__ = [
     "FeatureVariant",
     "IntelligenceEstimate",
     "IntelligenceSignal",
+    "InsightFinding",
+    "InsightSeverity",
     "LifecyclePhase",
     "MetricDirection",
     "MetricObservation",
@@ -43,10 +48,11 @@ __all__ = [
     "RunManifest",
     "SignalKind",
     "SubsystemSpec",
+    "TrainingInsightReport",
     "ThirdEye",
     "emit_metric",
     "instrument",
     "lifecycle",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

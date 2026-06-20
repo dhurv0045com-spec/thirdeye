@@ -78,6 +78,8 @@ The current integration can:
   comparable evaluated checkpoints.
 - Produce subsystem contribution estimates and clearly label them predictive,
   not causal.
+- Explain observed training behavior with measured basis, confidence,
+  limitations, and a recommended next measurement.
 - Generate a scorecard, scientific report, evidence bundle, HTML dashboard, and
   intelligence JSON report.
 - Inventory AN-RA features and identify missing controlled evidence.
@@ -90,7 +92,7 @@ matched initialization, data order, token budget, seed, precision, and
 evaluation protocol. Replicate with at least three seeds for a replicated
 evidence grade.
 
-### Not yet part of v0.3
+### Not yet part of v0.4
 
 The following parts of the long-term platform vision are not complete:
 
@@ -102,7 +104,7 @@ The following parts of the long-term platform vision are not complete:
 - A production React application.
 - A validated differentiable "intelligence loss" used for backpropagation.
 
-ThirdEye v0.3 is ready as the measurement and evidence foundation for tuning.
+ThirdEye v0.4 is ready as the measurement and evidence foundation for tuning.
 It is not yet the complete autonomous research laboratory described by the
 full roadmap.
 
@@ -145,6 +147,52 @@ Its meaning is exactly:
 > Given previous checkpoints from this project, how well does this checkpoint's
 > telemetry predict the configured held-out evaluation target?
 
+## Training Insight Engine
+
+The Insight Engine is the layer between raw charts and a research decision. It
+does not say "the model is intelligent" or "this subsystem caused a result."
+It says what ThirdEye observed, how strongly the available telemetry supports
+that observation, and what measurement should happen next.
+
+For each supported signal family, ThirdEye aggregates repeated readings at the
+same step, compares the mean of the first half of the observed window to the
+mean of the second half, and records the relative change:
+
+```text
+relative change = (last-window mean - first-window mean) / abs(first-window mean)
+```
+
+It uses that calculation for training loss, validation loss, gradient norm,
+learning rate, throughput, token utilization, and sampled subsystem signals.
+The report includes the number of points, both window means, relative change,
+telemetry confidence, limitations, and a next action. For example:
+
+```text
+Observation: training loss is rising
+Basis: 12 points; 2.10 -> 2.36; +12.4%
+Conclusion: attention required, observational only
+Next action: compare a fixed validation slice, data mix, learning rate, and resume lineage
+```
+
+The engine can also identify a held-out regression while training loss improves,
+near-zero or sharply variable gradients, scheduler transitions, throughput
+regressions, padding waste, activation saturation, subsystem drift, and missing
+capability calibration.
+
+Use it from the CLI or control-plane API:
+
+```powershell
+thirdeye explain --project anra
+```
+
+```text
+GET /projects/anra/insights
+```
+
+The scorecard and HTML dashboard show the same findings. This gives users a
+clear view inside training math while preserving the scientific rule: a pattern
+in telemetry is a hypothesis, not a causal claim.
+
 ## Repository Tree
 
 ```text
@@ -186,6 +234,7 @@ thirdeye/
     |   `-- pytorch.py           Basic model and runtime profiling
     `-- intelligence/
         |-- signals.py           Signal capture and vector construction
+        |-- diagnostics.py        Observational training explanations
         |-- pytorch.py           Deep subsystem hooks
         |-- calibration.py       Capability calibration model
         `-- monitor.py           Checkpoints, targets, persistence, reports
@@ -430,7 +479,7 @@ more useful. Five is the minimum, not the ideal scientific sample size.
 Install or update the standalone package:
 
 ```powershell
-python -m pip install -U "thirdeye-evidence @ git+https://github.com/dhurv0045com-spec/thirdeye.git@v0.3.0"
+python -m pip install -U "thirdeye-evidence @ git+https://github.com/dhurv0045com-spec/thirdeye.git@v0.4.0"
 ```
 
 Run the AN-RA inventory and evidence-gap report before training:
@@ -767,7 +816,7 @@ thresholds.
 The dashboard is refusing to invent a number. Run enough comparable evaluated
 checkpoints and then call `calibrate-intelligence`.
 
-## Validation Performed for v0.3
+## Validation Performed for v0.4
 
 The test suite verifies:
 
@@ -778,12 +827,14 @@ The test suite verifies:
 - Calibration across independent training sessions.
 - PyTorch hooks do not change model outputs.
 - PyTorch hooks do not change gradients.
-- Intelligence records appear in API and report flows.
+- Intelligence records and training explanations appear in API and report flows.
+- Diagnostics remain observational and include their measured basis, confidence,
+  limitations, and next measurement.
 - SQLite connections close correctly on Windows.
 - AN-RA's exact 27,019,999-parameter reference model remains recognized.
 - AN-RA core subsystems emit deep telemetry.
 
-The v0.3 release passed all ThirdEye tests, AN-RA integration tests, lint, and
+The v0.4 release passed all ThirdEye tests, AN-RA integration tests, lint, and
 Python compilation checks before publication.
 
 ## Final Interpretation Rule

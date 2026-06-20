@@ -162,3 +162,26 @@ def test_api_dashboard_and_project_snapshot(tmp_path, monkeypatch) -> None:
     response = client.get("/projects/demo")
     assert response.status_code == 200
     assert response.json()["project"]["name"] == "Demo"
+
+
+def test_api_exposes_observational_training_insights(tmp_path, monkeypatch) -> None:
+    from thirdeye.intelligence import TrainingSignalCollector
+
+    monkeypatch.setenv("THIRDEYE_HOME", str(tmp_path))
+    eye = ThirdEye()
+    eye.register_project(ProjectSpec("demo", "Demo"))
+    collector = TrainingSignalCollector()
+    for step in range(4):
+        collector.record_training_step(
+            step=step,
+            loss=1.0 + step * 0.1,
+            learning_rate=1e-3,
+            gradient_norm=1.0,
+        )
+    eye.record_intelligence_signals("demo", checkpoint_id="checkpoint-1", signals=collector.signals)
+
+    response = TestClient(app).get("/projects/demo/insights")
+
+    assert response.status_code == 200
+    assert response.json()["causal"] is False
+    assert any(row["finding_id"] == "loss_rising" for row in response.json()["findings"])

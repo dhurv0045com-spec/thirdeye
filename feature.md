@@ -5,7 +5,7 @@ This document is the product checklist for ThirdEye. It answers two questions:
 1. What can ThirdEye do today?
 2. What remains before it fully reaches the original vision?
 
-The current release is `v0.3.0`.
+The current release is `v0.4.0`.
 
 ## Product Goal
 
@@ -243,7 +243,27 @@ Important boundary:
 This predicts the configured held-out capability target. It is not universal
 intelligence and not causal attribution.
 
-### 10. Reports
+### 10. Training Insight Engine
+
+Status: available.
+
+ThirdEye turns raw telemetry into a bounded explanation of what is visible in
+the training process. It can surface:
+
+- Loss improvement, rise, stability, or plateau.
+- Training-versus-held-out divergence.
+- Gradient health and instability.
+- Learning-rate transitions.
+- Throughput regressions.
+- Token utilization and padding waste.
+- Subsystem saturation and representation/update drift.
+- Missing calibration for a capability estimate.
+
+Every finding includes a measured basis, confidence, limitations, and a
+recommended next measurement or controlled experiment. Findings are always
+observational; they never claim that a signal caused the result.
+
+### 11. Reports
 
 Status: available.
 
@@ -259,7 +279,7 @@ Why this matters:
 
 Researchers get both human-readable reports and machine-readable evidence.
 
-### 11. CLI
+### 12. CLI
 
 Status: available.
 
@@ -274,10 +294,11 @@ Current commands include:
 - `thirdeye evaluate`
 - `thirdeye inspect`
 - `thirdeye intelligence`
+- `thirdeye explain`
 - `thirdeye calibrate-intelligence`
 - `thirdeye serve`
 
-### 12. API and Dashboard
+### 13. API and Dashboard
 
 Status: basic available.
 
@@ -291,6 +312,7 @@ Current FastAPI endpoints include:
 - Project evaluation.
 - Project assessment when explicitly enabled.
 - Intelligence snapshot.
+- Training insight endpoint.
 
 Current dashboard:
 
@@ -299,8 +321,9 @@ Current dashboard:
 - Shows latest metrics.
 - Shows feature evidence.
 - Shows intelligence telemetry summary.
+- Shows the measured training explanation, confidence, and next action.
 
-### 13. AN-RA Reference Integration
+### 14. AN-RA Reference Integration
 
 Status: available locally in AN-RA integration.
 
@@ -375,7 +398,7 @@ without manual bookkeeping.
 
 ## Layer 2: Remote Workers
 
-Status: not built for v0.3.
+Status: not built for v0.4.
 
 Remaining:
 

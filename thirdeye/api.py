@@ -12,7 +12,7 @@ from thirdeye.manifest import manifest_from_dict
 from thirdeye.models import ProjectSpec
 from thirdeye.sdk import ThirdEye
 
-app = FastAPI(title="ThirdEye", version="0.3.0")
+app = FastAPI(title="ThirdEye", version="0.4.0")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -69,6 +69,14 @@ def features(project_id: str) -> dict:
 @app.get("/projects/{project_id}/intelligence")
 def intelligence(project_id: str) -> dict:
     return ThirdEye().intelligence_snapshot(project_id)
+
+
+@app.get("/projects/{project_id}/insights")
+def insights(project_id: str) -> dict:
+    try:
+        return ThirdEye().intelligence_snapshot(project_id)["insight"]
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/projects/{project_id}")
