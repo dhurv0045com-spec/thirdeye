@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS records (
     record_id TEXT NOT NULL,
     project_id TEXT NOT NULL,
     payload_json TEXT NOT NULL,
-    created_at REAL NOT NULL DEFAULT (unixepoch()),
+    created_at REAL NOT NULL DEFAULT (CAST(strftime('%s', 'now') AS REAL)),
     PRIMARY KEY (record_type, record_id)
 );
 CREATE INDEX IF NOT EXISTS idx_records_project
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS metrics (
     run_id TEXT NOT NULL,
     metric_id TEXT NOT NULL,
     payload_json TEXT NOT NULL,
-    created_at REAL NOT NULL DEFAULT (unixepoch()),
+    created_at REAL NOT NULL DEFAULT (CAST(strftime('%s', 'now') AS REAL)),
     PRIMARY KEY (run_id, metric_id)
 );
 """

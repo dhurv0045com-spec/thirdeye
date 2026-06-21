@@ -12,6 +12,7 @@ from thirdeye.models import (
     ProtocolSpec,
 )
 from thirdeye.sdk import ThirdEye
+from thirdeye.store import EvidenceStore, SCHEMA_SQL
 
 
 def _feature(retraining: bool = False) -> FeatureSpec:
@@ -110,3 +111,10 @@ def test_lineage_manifest_is_reproducible_shape(tmp_path) -> None:
     assert len(manifest.config_hash) == 64
     assert len(manifest.dirty_patch_hash) == 64
 
+
+def test_store_schema_avoids_newer_sqlite_unixepoch_function(tmp_path) -> None:
+    store = EvidenceStore(tmp_path)
+    store.put("project", "demo", "demo", {"name": "Demo"})
+
+    assert "unixepoch" not in SCHEMA_SQL.lower()
+    assert store.get("project", "demo") == {"name": "Demo"}
